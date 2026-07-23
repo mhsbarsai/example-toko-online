@@ -1,0 +1,6 @@
+{
+  "name": "TokoNusantara Ecommerce Indonesia",
+  "description": "Website Toko Online (E-Commerce) lengkap dan responsif dengan fitur keranjang belanja, checkout, dan sistem pembayaran terintegrasi.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
