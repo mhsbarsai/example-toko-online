@@ -1,111 +1,43 @@
-export type ProductCategory = 
-  | 'Semua'
-  | 'Elektronik & Gadget'
-  | 'Fashion Pria & Wanita'
-  | 'Sepatu & Olahraga'
-  | 'Peralatan Rumah'
-  | 'Kecantikan & Kesehatan'
-  | 'Makanan & Minuman'
-  | 'Produk Lokal UKM';
-
-export interface Product {
+export interface ServicePackage {
   id: string;
   name: string;
-  category: ProductCategory;
-  price: number;
-  originalPrice?: number;
-  discountPercentage?: number;
-  rating: number;
-  reviewCount: number;
-  salesCount: number;
-  stock: number;
-  image: string;
-  additionalImages?: string[];
+  price: number; // in IDR
+  originalPrice?: number; // for showing discount
   description: string;
   features: string[];
-  variants?: {
-    type: 'color' | 'size' | 'variant';
-    options: string[];
-  }[];
-  brand: string;
-  weightGrams: number;
-  isFlashSale?: boolean;
-  isBestSeller?: boolean;
-  freeShipping?: boolean;
+  badge?: string;
+  deliveryTime: string; // e.g. "3-5 Hari"
+  recommended?: boolean;
 }
 
-export interface CartItem {
-  product: Product;
-  quantity: number;
-  selectedColor?: string;
-  selectedSize?: string;
-  selectedVariant?: string;
-}
-
-export interface ShippingAddress {
-  fullName: string;
-  phone: string;
-  address: string;
-  city: string;
-  province: string;
-  postalCode: string;
-  notes?: string;
-}
-
-export interface ShippingCourier {
+export interface PortfolioItem {
   id: string;
-  name: string;
-  serviceName: string;
-  estimatedDays: string;
-  price: number;
-  logo: string;
-}
-
-export type PaymentCategory = 'qris' | 'va' | 'ewallet' | 'card' | 'cod';
-
-export interface PaymentMethodOption {
-  id: string;
-  name: string;
-  category: PaymentCategory;
-  icon: string;
-  description?: string;
-  accountNumber?: string;
-}
-
-export interface Voucher {
-  code: string;
   title: string;
-  discountType: 'percentage' | 'fixed';
-  discountValue: number; // e.g. 20 for 20% or 50000 for Rp 50,000
-  minSpend: number;
-  maxDiscount?: number;
+  category: 'landing' | 'toko-online' | 'profile' | 'custom';
+  description: string;
+  image: string;
+  tags: string[];
+  clientName: string;
+  clientLocation: string;
+  liveUrl?: string;
 }
 
-export type OrderStatus = 'Menunggu Pembayaran' | 'Diproses' | 'Dikirim' | 'Selesai' | 'Dibatalkan';
-
-export interface Order {
+export interface TestimonialItem {
   id: string;
-  createdAt: string;
-  items: CartItem[];
-  address: ShippingAddress;
-  courier: ShippingCourier;
-  paymentMethod: PaymentMethodOption;
-  subtotal: number;
-  shippingCost: number;
-  discount: number;
-  total: number;
-  status: OrderStatus;
-  trackingNumber: string;
-  virtualAccount?: string;
-  qrCodeUrl?: string;
-  paidAt?: string;
-}
-
-export interface ProductReview {
-  id: string;
-  userName: string;
+  name: string;
+  role: string;
+  company: string;
+  category: string; // e.g. "Kuliner", "Fashion", "Jasa", "Toko Kelontong"
   rating: number;
-  date: string;
-  comment: string;
-  userAvatar: string;
+  content: string;
+  avatar: string;
+  waVerified?: boolean;
+}
+
+export interface EstimatorFeature {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  category: 'base' | 'pages' | 'features' | 'addons';
 }

@@ -1,6 +1,6 @@
 {
-  "name": "TokoNusantara Ecommerce Indonesia",
-  "description": "Website Toko Online (E-Commerce) lengkap dan responsif dengan fitur keranjang belanja, checkout, dan sistem pembayaran terintegrasi.",
+  "name": "Portofolio Jasa Website UMKM",
+  "description": "Portofolio interaktif dan katalog layanan pembuatan website untuk UMKM Indonesia, dilengkapi estimasi harga dan integrasi WhatsApp.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
