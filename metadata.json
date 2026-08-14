@@ -1,6 +1,6 @@
 {
-  "name": "TokoNusantara Ecommerce Indonesia",
-  "description": "Website Toko Online (E-Commerce) lengkap dan responsif dengan fitur keranjang belanja, checkout, dan sistem pembayaran terintegrasi.",
+  "name": "Kencana Bakery & Patisserie",
+  "description": "Toko Roti & Pastry Artisan dengan katalog produk lengkap, sistem pemesanan online, kustomisasi kue, dan integrasi pembayaran multi-kanal (QRIS, Virtual Account, E-Wallet, Kartu Kredit).",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

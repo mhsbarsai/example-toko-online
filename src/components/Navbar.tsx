@@ -1,150 +1,247 @@
-import React, { useState, useEffect } from 'react';
-import { Globe, Menu, X, ArrowRight, MessageCircle, Sun, Moon } from 'lucide-react';
+import React from 'react';
+import { 
+  ShoppingBag, 
+  Search, 
+  MapPin, 
+  Sparkles, 
+  Clock, 
+  Receipt, 
+  Phone,
+  ChefHat,
+  Menu,
+  X
+} from 'lucide-react';
+import { CartItem } from '../types';
+import { formatRupiah } from '../utils/formatters';
 
 interface NavbarProps {
-  onNavClick: (sectionId: string) => void;
-  isDark: boolean;
-  onToggleDark: () => void;
+  cartItems: CartItem[];
+  onOpenCart: () => void;
+  onOpenTracker: () => void;
+  onOpenBakingSchedule: () => void;
+  onOpenLocations: () => void;
+  onOpenAIConsultant: () => void;
+  onOpenAdmin: () => void;
+  onSelectCategory: (catId: string) => void;
+  searchQuery: string;
+  onSearchChange: (q: string) => void;
 }
 
-export default function Navbar({ onNavClick, isDark, onToggleDark }: NavbarProps) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      if (window.scrollY > 20) {
-        setScrolled(true);
-      } else {
-        setScrolled(false);
-      }
-    };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
-  const navItems = [
-    { label: 'Katalog Layanan', id: 'layanan' },
-    { label: 'Kalkulator Harga', id: 'estimator' },
-    { label: 'Portofolio', id: 'portofolio' },
-    { label: 'Testimoni', id: 'testimoni' },
-    { label: 'FAQ', id: 'faq' }
-  ];
-
-  const handleItemClick = (id: string) => {
-    setIsOpen(false);
-    onNavClick(id);
-  };
-
-  const handleWhatsAppDirect = () => {
-    const text = encodeURIComponent("Halo! Saya ingin berkonsultasi mengenai pembuatan website untuk usaha UMKM saya.");
-    window.open(`https://wa.me/6289512093311?text=${text}`, '_blank', 'noopener,noreferrer');
-  };
+export const Navbar: React.FC<NavbarProps> = ({
+  cartItems,
+  onOpenCart,
+  onOpenTracker,
+  onOpenBakingSchedule,
+  onOpenLocations,
+  onOpenAIConsultant,
+  onOpenAdmin,
+  searchQuery,
+  onSearchChange,
+}) => {
+  const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
+  const totalCartCount = cartItems.reduce((acc, item) => acc + item.quantity, 0);
+  const totalCartPrice = cartItems.reduce((acc, item) => acc + (item.product.price * item.quantity), 0);
 
   return (
-    <nav 
-      id="main-navbar"
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        scrolled 
-          ? 'bg-white dark:bg-slate-900 border-b-4 border-orange-200 dark:border-orange-500 shadow-md py-3' 
-          : 'bg-transparent py-5'
-      }`}
-    >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between">
-          {/* Logo / Branding */}
-          <div 
-            onClick={() => handleItemClick('hero')} 
-            className="flex items-center space-x-2.5 cursor-pointer group"
-          >
-            <div className="flex items-center justify-center transition-all group-hover:scale-105">
-              <img src="/logo.svg" alt="Creavora Logo" className="h-9 w-9 object-contain drop-shadow-sm" referrerPolicy="no-referrer" />
-            </div>
-            <div>
-              <span className="font-display font-black text-xl tracking-tight text-slate-800 dark:text-slate-100">
-                Crea<span className="text-orange-500">vora</span>
-              </span>
-              <p className="text-[9px] font-extrabold tracking-widest text-slate-500 dark:text-slate-400 uppercase leading-none">
-                JASA WEB UMKM
-              </p>
-            </div>
+    <header id="main-header" className="sticky top-0 z-40 bg-[#FFF9F2]/95 backdrop-blur-md border-b border-[#FCE7D2] shadow-xs">
+      {/* Top Notification Bar */}
+      <div id="top-announcement-bar" className="bg-[#4A2C2A] text-[#FFF9F2] text-xs px-4 py-1.5 font-medium">
+        <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <span className="inline-block w-2.5 h-2.5 rounded-full bg-[#2EC4B6] animate-pulse"></span>
+            <span>Oven Menyala: Batch Hangat Sourdough & Croissant keluar setiap 07:30 & 14:00 WIB</span>
           </div>
-
-          {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-6">
-            <div className="flex space-x-6">
-              {navItems.map((item) => (
-                <button
-                  key={item.id}
-                  onClick={() => handleItemClick(item.id)}
-                  className="text-slate-600 dark:text-slate-300 hover:text-orange-500 dark:hover:text-orange-400 font-bold text-sm transition-colors cursor-pointer"
-                >
-                  {item.label}
-                </button>
-              ))}
-            </div>
-
-            {/* Dark Mode Toggle (Desktop) */}
-            <button
-              onClick={onToggleDark}
-              className="p-2.5 rounded-full text-slate-600 hover:text-orange-500 hover:bg-slate-100 dark:text-slate-300 dark:hover:text-orange-400 dark:hover:bg-slate-800/60 transition-all duration-200 cursor-pointer animate-fadeIn"
-              aria-label="Toggle theme"
+          <div className="flex items-center gap-4 text-[#FDE2CF]">
+            <button 
+              id="btn-top-schedule"
+              onClick={onOpenBakingSchedule} 
+              className="hover:text-[#FFD93D] transition-colors flex items-center gap-1 cursor-pointer"
             >
-              {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+              <Clock className="w-3.5 h-3.5 text-[#FFD93D]" />
+              <span>Jadwal Pemanggangan</span>
             </button>
-
-            <button
-              onClick={handleWhatsAppDirect}
-              className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm px-6 py-2.5 rounded-full transition-all shadow-lg shadow-blue-200 dark:shadow-none cursor-pointer"
+            <span className="text-[#8B5E5B] hidden sm:inline">|</span>
+            <button 
+              id="btn-top-admin"
+              onClick={onOpenAdmin} 
+              className="hover:text-white transition-colors flex items-center gap-1 cursor-pointer text-[#FFD93D] font-medium"
             >
-              <MessageCircle className="h-4 w-4" />
-              <span>Konsultasi Gratis</span>
-              <ArrowRight className="h-3 w-3" />
-            </button>
-          </div>
-
-          {/* Mobile Actions (Toggle + Menu Button) */}
-          <div className="md:hidden flex items-center space-x-2">
-            {/* Dark Mode Toggle (Mobile) */}
-            <button
-              onClick={onToggleDark}
-              className="p-2 rounded-xl text-slate-600 hover:text-orange-500 hover:bg-slate-100 dark:text-slate-300 dark:hover:text-orange-400 dark:hover:bg-slate-800 transition-all duration-200 cursor-pointer"
-              aria-label="Toggle theme"
-            >
-              {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-            </button>
-
-            <button
-              onClick={() => setIsOpen(!isOpen)}
-              className="p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:text-orange-500 focus:outline-none cursor-pointer"
-            >
-              {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+              <span>Panel Pesanan Toko</span>
             </button>
           </div>
         </div>
       </div>
 
-      {/* Mobile Navigation Drawer */}
-      {isOpen && (
-        <div className="md:hidden bg-white dark:bg-slate-900 border-b-4 border-orange-200 dark:border-orange-500 absolute top-full left-0 right-0 py-4 px-4 shadow-lg flex flex-col space-y-4 animate-fadeIn">
-          {navItems.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => handleItemClick(item.id)}
-              className="text-slate-700 dark:text-slate-200 hover:text-orange-500 dark:hover:text-orange-400 font-bold text-base text-left py-2 border-b border-slate-100 dark:border-slate-800 cursor-pointer"
+      {/* Main Navbar */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-20 gap-4">
+          
+          {/* Logo & Brand */}
+          <div className="flex items-center gap-3">
+            <button 
+              id="brand-logo-btn"
+              onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} 
+              className="flex items-center gap-3 text-left group cursor-pointer"
             >
-              {item.label}
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#FF6B35] to-[#E8551E] flex items-center justify-center text-white shadow-md group-hover:scale-105 transition-transform">
+                <ChefHat className="w-7 h-7 text-[#FFD93D]" />
+              </div>
+              <div>
+                <span className="text-xl sm:text-2xl font-serif font-bold text-[#4A2C2A] tracking-tight block">
+                  Kencana <span className="text-[#FF6B35] font-sans font-semibold text-base sm:text-lg">Bakery</span>
+                </span>
+                <span className="text-[11px] font-sans tracking-wider uppercase text-[#7D5A50] font-bold block">
+                  Artisan Boulangerie & Patisserie
+                </span>
+              </div>
             </button>
-          ))}
-          <button
-            onClick={handleWhatsAppDirect}
-            className="flex items-center justify-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-full transition-all cursor-pointer"
-          >
-            <MessageCircle className="h-5 w-5" />
-            <span>Hubungi via WhatsApp</span>
-          </button>
+          </div>
+
+          {/* Search Bar (Desktop) */}
+          <div className="hidden md:flex flex-1 max-w-md mx-4">
+            <div className="relative w-full">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#FF6B35]" />
+              <input
+                id="search-input-desktop"
+                type="text"
+                value={searchQuery}
+                onChange={(e) => onSearchChange(e.target.value)}
+                placeholder="Cari sourdough, croissant butter, basque cheesecake..."
+                className="w-full pl-10 pr-4 py-2.5 bg-[#FFF0E0]/70 border border-[#FCD8B8] rounded-full text-sm text-[#4A2C2A] placeholder-[#947065] focus:outline-hidden focus:ring-2 focus:ring-[#FF6B35]/50 focus:bg-white transition-all"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => onSearchChange('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[#FF6B35] hover:text-[#4A2C2A] font-medium"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex items-center gap-2 sm:gap-3">
+            {/* AI Sommelier Button */}
+            <button
+              id="btn-open-ai-consultant"
+              onClick={onOpenAIConsultant}
+              className="hidden lg:flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-gradient-to-r from-[#FF6B35] to-[#FF8A5B] text-white text-xs font-bold shadow-xs hover:from-[#E8551E] hover:to-[#FF6B35] transition-all cursor-pointer"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-[#FFD93D]" />
+              <span>Tanya Chef AI</span>
+            </button>
+
+            {/* Outlet Locations */}
+            <button
+              id="btn-open-locations"
+              onClick={onOpenLocations}
+              className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-full text-[#4A2C2A] hover:bg-[#FFEBD6] text-xs font-semibold transition-colors cursor-pointer"
+              title="4 Cabang Outlet"
+            >
+              <MapPin className="w-4 h-4 text-[#FF6B35]" />
+              <span className="hidden xl:inline">Outlet & Jam Buka</span>
+            </button>
+
+            {/* Order Tracker */}
+            <button
+              id="btn-open-tracker"
+              onClick={onOpenTracker}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-full text-[#4A2C2A] hover:bg-[#FFEBD6] text-xs font-semibold transition-colors cursor-pointer"
+            >
+              <Receipt className="w-4 h-4 text-[#2EC4B6]" />
+              <span className="hidden sm:inline">Lacak Pesanan</span>
+            </button>
+
+            {/* Cart Button */}
+            <button
+              id="btn-open-cart"
+              onClick={onOpenCart}
+              className="relative flex items-center gap-2.5 bg-[#2EC4B6] hover:bg-[#25A599] text-white px-4 py-2.5 rounded-2xl font-bold text-sm shadow-md transition-all cursor-pointer"
+            >
+              <div className="relative">
+                <ShoppingBag className="w-5 h-5" />
+                {totalCartCount > 0 && (
+                  <span className="absolute -top-2 -right-2 bg-[#FFD93D] text-[#4A2C2A] font-bold text-[10px] w-5 h-5 rounded-full flex items-center justify-center shadow-xs">
+                    {totalCartCount}
+                  </span>
+                )}
+              </div>
+              <div className="text-left hidden xs:block">
+                <span className="text-[11px] text-[#E0FAF7] block leading-tight">Keranjang</span>
+                <span className="font-bold text-xs leading-tight">
+                  {totalCartCount > 0 ? formatRupiah(totalCartPrice) : 'Kosong'}
+                </span>
+              </div>
+            </button>
+
+            {/* Mobile Menu Toggle */}
+            <button
+              id="btn-mobile-menu-toggle"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="md:hidden p-2 rounded-xl text-[#4A2C2A] hover:bg-[#FFEBD6] transition-colors"
+            >
+              {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            </button>
+          </div>
         </div>
-      )}
-    </nav>
+
+        {/* Mobile Search Bar */}
+        <div className="md:hidden pb-3">
+          <div className="relative w-full">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#FF6B35]" />
+            <input
+              id="search-input-mobile"
+              type="text"
+              value={searchQuery}
+              onChange={(e) => onSearchChange(e.target.value)}
+              placeholder="Cari roti manis, croissant, sourdough..."
+              className="w-full pl-10 pr-4 py-2 bg-[#FFF0E0]/70 border border-[#FCD8B8] rounded-full text-sm text-[#4A2C2A] placeholder-[#947065] focus:outline-hidden focus:ring-2 focus:ring-[#FF6B35]/40"
+            />
+          </div>
+        </div>
+
+        {/* Mobile Dropdown Menu */}
+        {mobileMenuOpen && (
+          <div id="mobile-navigation-drawer" className="md:hidden py-3 border-t border-[#FCE7D2] flex flex-col gap-2">
+            <button
+              onClick={() => { onOpenAIConsultant(); setMobileMenuOpen(false); }}
+              className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl bg-[#FFF0E0] text-[#4A2C2A] text-sm font-semibold"
+            >
+              <Sparkles className="w-4 h-4 text-[#FF6B35]" />
+              <span>Tanya Chef AI (Rekomendasi Roti & Acara)</span>
+            </button>
+            <button
+              onClick={() => { onOpenBakingSchedule(); setMobileMenuOpen(false); }}
+              className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl hover:bg-[#FFF0E0] text-[#4A2C2A] text-sm font-semibold"
+            >
+              <Clock className="w-4 h-4 text-[#FF6B35]" />
+              <span>Jadwal Oven Hari Ini</span>
+            </button>
+            <button
+              onClick={() => { onOpenLocations(); setMobileMenuOpen(false); }}
+              className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl hover:bg-[#FFF0E0] text-[#4A2C2A] text-sm font-semibold"
+            >
+              <MapPin className="w-4 h-4 text-[#FF6B35]" />
+              <span>Lokasi 4 Cabang Outlet</span>
+            </button>
+            <button
+              onClick={() => { onOpenTracker(); setMobileMenuOpen(false); }}
+              className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl hover:bg-[#FFF0E0] text-[#4A2C2A] text-sm font-semibold"
+            >
+              <Receipt className="w-4 h-4 text-[#2EC4B6]" />
+              <span>Lacak Status Pesanan Saya</span>
+            </button>
+            <button
+              onClick={() => { onOpenAdmin(); setMobileMenuOpen(false); }}
+              className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl hover:bg-[#FFF0E0] text-[#4A2C2A] text-sm font-semibold"
+            >
+              <ChefHat className="w-4 h-4 text-[#FF6B35]" />
+              <span>Kelola Pesanan Toko (Admin Mode)</span>
+            </button>
+          </div>
+        )}
+      </div>
+    </header>
   );
-}
+};

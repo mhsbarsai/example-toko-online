@@ -2,397 +2,322 @@ import React, { useState } from 'react';
 import { 
   X, 
   Star, 
-  Truck, 
-  ShieldCheck, 
-  Heart, 
-  ShoppingBag, 
-  Check, 
-  Plus, 
   Minus, 
-  Share2, 
-  MessageSquare,
-  Sparkles
+  Plus, 
+  ShoppingBag, 
+  ShieldCheck, 
+  Clock, 
+  Utensils, 
+  AlertCircle, 
+  HeartHandshake,
+  Check
 } from 'lucide-react';
-import { Product, ProductReview } from '../types';
+import { Product, CartItem } from '../types';
 import { formatRupiah } from '../utils/formatters';
 
 interface ProductDetailModalProps {
   product: Product | null;
-  isOpen: boolean;
   onClose: () => void;
-  isWishlisted: boolean;
-  onToggleWishlist: (product: Product) => void;
-  onAddToCart: (product: Product, quantity: number, options?: { color?: string; size?: string; variant?: string }) => void;
-  onInstantBuy: (product: Product, quantity: number, options?: { color?: string; size?: string; variant?: string }) => void;
+  onAddToCart: (item: Omit<CartItem, 'id'>) => void;
 }
-
-const SAMPLE_REVIEWS: ProductReview[] = [
-  {
-    id: 'rev-1',
-    userName: 'Budi Santoso',
-    rating: 5,
-    date: '2 Hari yang lalu',
-    comment: 'Pengiriman sangat cepat! Packaging rapi menggunakan bubble wrap tebal. Kualitas produk melebihi ekspektasi, sangat puas belanja di TokoNusantara!',
-    userAvatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100&q=80'
-  },
-  {
-    id: 'rev-2',
-    userName: 'Siti Rahmawati',
-    rating: 5,
-    date: '1 Minggu yang lalu',
-    comment: 'Barang original 100%, garansi resmi terdaftar. Seller sangat ramah dan merespon pertanyaan dengan cepat. Recommended seller!',
-    userAvatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=100&q=80'
-  }
-];
 
 export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
   product,
-  isOpen,
   onClose,
-  isWishlisted,
-  onToggleWishlist,
   onAddToCart,
-  onInstantBuy
 }) => {
-  if (!isOpen || !product) return null;
+  if (!product) return null;
 
-  const images = [product.image, ...(product.additionalImages || [])];
-  const [selectedImage, setSelectedImage] = useState(images[0]);
   const [quantity, setQuantity] = useState(1);
+  const [sliceOption, setSliceOption] = useState<
+    'Utuh (Tanpa Potong)' | 'Potong Tipis (10mm - Sandwiched)' | 'Potong Tebal (18mm - Toasting)'
+  >('Utuh (Tanpa Potong)');
+  const [customMessage, setCustomMessage] = useState('');
+  const [candleCount, setCandleCount] = useState(0);
+  const [itemNotes, setItemNotes] = useState('');
+  const [addedAnimation, setAddedAnimation] = useState(false);
 
-  // Variant selection state
-  const colorVariant = product.variants?.find(v => v.type === 'color');
-  const sizeVariant = product.variants?.find(v => v.type === 'size');
-  const otherVariant = product.variants?.find(v => v.type === 'variant');
-
-  const [selectedColor, setSelectedColor] = useState<string | undefined>(colorVariant?.options[0]);
-  const [selectedSize, setSelectedSize] = useState<string | undefined>(sizeVariant?.options[0]);
-  const [selectedOther, setSelectedOther] = useState<string | undefined>(otherVariant?.options[0]);
-
-  const [activeTab, setActiveTab] = useState<'deskripsi' | 'ulasan'>('deskripsi');
-
-  const handleAddToCart = () => {
-    onAddToCart(product, quantity, {
-      color: selectedColor,
-      size: selectedSize,
-      variant: selectedOther
+  const handleAdd = () => {
+    onAddToCart({
+      product,
+      quantity,
+      sliceOption: product.allowSlicing ? sliceOption : undefined,
+      customMessage: product.allowCustomCakeMessage && customMessage.trim() ? customMessage.trim() : undefined,
+      candleCount: product.allowCandles ? candleCount : undefined,
+      itemNotes: itemNotes.trim() ? itemNotes.trim() : undefined,
     });
+
+    setAddedAnimation(true);
+    setTimeout(() => {
+      setAddedAnimation(false);
+      onClose();
+    }, 600);
   };
 
-  const handleInstantBuy = () => {
-    onInstantBuy(product, quantity, {
-      color: selectedColor,
-      size: selectedSize,
-      variant: selectedOther
-    });
-  };
+  const totalPrice = product.price * quantity;
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-200">
-      <div 
-        className="bg-white w-full max-w-4xl rounded-3xl shadow-2xl overflow-hidden relative max-h-[90vh] flex flex-col border border-slate-200"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header Bar */}
-        <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
-          <div className="flex items-center gap-2 text-xs font-semibold text-slate-500">
-            <span>{product.category}</span>
-            <span>/</span>
-            <span className="text-emerald-700 font-bold">{product.brand}</span>
+    <div 
+      id="product-detail-modal-overlay" 
+      className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto animate-fade-in"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div className="bg-[#FFF9F2] rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-[#FCE7D2] relative my-auto">
+        
+        {/* Close Button */}
+        <button
+          id="btn-close-product-modal"
+          onClick={onClose}
+          className="absolute top-4 right-4 z-10 w-9 h-9 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center transition-colors cursor-pointer"
+        >
+          <X className="w-5 h-5" />
+        </button>
+
+        {/* Modal Header Image */}
+        <div className="relative h-64 sm:h-72 w-full bg-[#FFF0E0]">
+          <img
+            src={product.image}
+            alt={product.name}
+            referrerPolicy="no-referrer"
+            onError={(e) => {
+              e.currentTarget.src = 'https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=800&q=80';
+            }}
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-transparent flex items-end p-6">
+            <div className="text-white">
+              <div className="flex flex-wrap gap-2 mb-2">
+                {product.badges?.map((badge, i) => (
+                  <span key={i} className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#FFD93D] text-[#4A2C2A]">
+                    {badge}
+                  </span>
+                ))}
+              </div>
+              <h2 className="text-2xl sm:text-3xl font-serif font-bold text-white leading-tight">
+                {product.name}
+              </h2>
+            </div>
           </div>
-          <button
-            id="close-product-detail-modal-btn"
-            onClick={onClose}
-            className="p-2 rounded-full hover:bg-slate-200 text-slate-500 hover:text-slate-800 transition"
-          >
-            <X className="w-5 h-5" />
-          </button>
         </div>
 
-        {/* Scrollable Modal Body */}
-        <div className="overflow-y-auto p-6 space-y-8 flex-1">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {/* Left: Gallery */}
-            <div className="space-y-4">
-              <div className="aspect-square rounded-2xl overflow-hidden bg-slate-100 border border-slate-200 shadow-inner relative">
-                <img
-                  src={selectedImage}
-                  alt={product.name}
-                  className="w-full h-full object-cover transition-all duration-300"
-                  referrerPolicy="no-referrer"
-                />
-                {product.discountPercentage && (
-                  <span className="absolute top-3 left-3 bg-rose-600 text-white font-black text-xs px-2.5 py-1 rounded-lg">
-                    Diskon {product.discountPercentage}%
-                  </span>
-                )}
-              </div>
-
-              {/* Thumbnails */}
-              {images.length > 1 && (
-                <div className="flex items-center gap-3 overflow-x-auto pb-1">
-                  {images.map((img, idx) => (
-                    <button
-                      key={idx}
-                      id={`thumbnail-select-${idx}`}
-                      onClick={() => setSelectedImage(img)}
-                      className={`w-16 h-16 rounded-xl border-2 overflow-hidden shrink-0 transition ${
-                        selectedImage === img ? 'border-emerald-600 ring-2 ring-emerald-500/30' : 'border-slate-200 hover:border-slate-300'
-                      }`}
-                    >
-                      <img src={img} alt="Thumbnail" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Right: Info & Purchase Options */}
-            <div className="space-y-5">
-              <div>
-                <div className="flex items-center gap-2 mb-1.5">
-                  <span className="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2.5 py-0.5 rounded-md uppercase">
-                    Stok Tersedia ({product.stock})
-                  </span>
-                  {product.freeShipping && (
-                    <span className="bg-blue-100 text-blue-800 text-[10px] font-bold px-2.5 py-0.5 rounded-md uppercase flex items-center gap-1">
-                      <Truck className="w-3 h-3" /> Bebas Ongkir
-                    </span>
-                  )}
-                </div>
-
-                <h1 className="text-xl sm:text-2xl font-bold text-slate-900 leading-snug">
-                  {product.name}
-                </h1>
-
-                {/* Rating & Sales */}
-                <div className="flex items-center gap-2 mt-2 text-xs">
-                  <div className="flex items-center text-amber-500 font-bold bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200/60">
-                    <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400 mr-1" />
-                    <span>{product.rating.toFixed(1)}</span>
-                  </div>
-                  <span className="text-slate-400">({product.reviewCount} Ulasan)</span>
-                  <span className="text-slate-300">•</span>
-                  <span className="text-slate-600 font-medium">Terjual {product.salesCount} unit</span>
-                </div>
-              </div>
-
-              {/* Price Block */}
-              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200/80 flex items-baseline gap-3">
-                <span className="text-2xl sm:text-3xl font-black text-slate-900">
+        {/* Content Body */}
+        <div className="p-6 space-y-6">
+          
+          {/* Price, Rating, Servings */}
+          <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-[#FCE7D2]">
+            <div>
+              <div className="flex items-baseline gap-2">
+                <span className="text-2xl font-bold text-[#FF6B35] font-serif">
                   {formatRupiah(product.price)}
                 </span>
-                {product.originalPrice && (
-                  <span className="text-sm text-slate-400 line-through">
+                {product.originalPrice && product.originalPrice > product.price && (
+                  <span className="text-sm text-[#947065] line-through">
                     {formatRupiah(product.originalPrice)}
                   </span>
                 )}
               </div>
+              <span className="text-xs text-[#2EC4B6] font-bold flex items-center gap-1 mt-0.5">
+                <ShieldCheck className="w-3.5 h-3.5" />
+                Dipanggang Segar Tanpa Bahan Kimia & Pengawet
+              </span>
+            </div>
 
-              {/* Variants Selector */}
-              {colorVariant && (
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
-                    Pilihan Warna: <span className="text-emerald-700 font-normal">{selectedColor}</span>
-                  </label>
-                  <div className="flex flex-wrap gap-2">
-                    {colorVariant.options.map((col) => (
-                      <button
-                        key={col}
-                        id={`variant-color-${col}`}
-                        onClick={() => setSelectedColor(col)}
-                        className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold border transition ${
-                          selectedColor === col
-                            ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
-                            : 'bg-white text-slate-700 border-slate-200 hover:border-emerald-400'
-                        }`}
-                      >
-                        {col}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {sizeVariant && (
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
-                    Ukuran: <span className="text-emerald-700 font-normal">{selectedSize}</span>
-                  </label>
-                  <div className="flex flex-wrap gap-2">
-                    {sizeVariant.options.map((sz) => (
-                      <button
-                        key={sz}
-                        id={`variant-size-${sz}`}
-                        onClick={() => setSelectedSize(sz)}
-                        className={`w-10 h-10 rounded-xl text-xs font-bold border transition ${
-                          selectedSize === sz
-                            ? 'bg-slate-900 text-white border-slate-900 shadow-sm'
-                            : 'bg-white text-slate-700 border-slate-200 hover:border-slate-400'
-                        }`}
-                      >
-                        {sz}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {otherVariant && (
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
-                    Tipe / Varian: <span className="text-emerald-700 font-normal">{selectedOther}</span>
-                  </label>
-                  <div className="flex flex-wrap gap-2">
-                    {otherVariant.options.map((varOpt) => (
-                      <button
-                        key={varOpt}
-                        id={`variant-other-${varOpt}`}
-                        onClick={() => setSelectedOther(varOpt)}
-                        className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition ${
-                          selectedOther === varOpt
-                            ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
-                            : 'bg-white text-slate-700 border-slate-200 hover:border-emerald-400'
-                        }`}
-                      >
-                        {varOpt}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Quantity Adjuster */}
-              <div className="space-y-2">
-                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
-                  Jumlah Pembelian
-                </label>
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center border border-slate-200 rounded-xl bg-white overflow-hidden shadow-2xs">
-                    <button
-                      id="decrease-qty-btn"
-                      onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                      className="p-2 text-slate-600 hover:bg-slate-100 transition"
-                      disabled={quantity <= 1}
-                    >
-                      <Minus className="w-4 h-4" />
-                    </button>
-                    <span className="w-12 text-center text-sm font-bold text-slate-900">
-                      {quantity}
-                    </span>
-                    <button
-                      id="increase-qty-btn"
-                      onClick={() => setQuantity(Math.min(product.stock, quantity + 1))}
-                      className="p-2 text-slate-600 hover:bg-slate-100 transition"
-                      disabled={quantity >= product.stock}
-                    >
-                      <Plus className="w-4 h-4" />
-                    </button>
-                  </div>
-                  <span className="text-xs text-slate-400">
-                    Subtotal: <strong className="text-slate-900">{formatRupiah(product.price * quantity)}</strong>
-                  </span>
-                </div>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1 bg-[#FFEBD6] px-3 py-1.5 rounded-xl text-[#4A2C2A] text-xs font-bold">
+                <Star className="w-4 h-4 fill-[#FFD93D] text-[#FFD93D]" />
+                <span>{product.rating}</span>
+                <span className="text-[#7D5A50] font-normal">({product.reviewsCount} ulasan)</span>
               </div>
-
-              {/* Action Buttons */}
-              <div className="pt-2 flex items-center gap-3">
-                <button
-                  id="detail-add-to-cart-btn"
-                  onClick={handleAddToCart}
-                  className="flex-1 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 font-bold py-3.5 px-4 rounded-2xl text-sm flex items-center justify-center gap-2 transition"
-                >
-                  <ShoppingBag className="w-4 h-4" /> + Keranjang
-                </button>
-
-                <button
-                  id="detail-instant-buy-btn"
-                  onClick={handleInstantBuy}
-                  className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 px-4 rounded-2xl text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/20 transition hover:scale-[1.02] active:scale-95"
-                >
-                  Beli Sekarang
-                </button>
-
-                <button
-                  id="detail-wishlist-toggle-btn"
-                  onClick={() => onToggleWishlist(product)}
-                  className={`p-3.5 rounded-2xl border transition ${
-                    isWishlisted 
-                      ? 'bg-rose-50 border-rose-200 text-rose-600' 
-                      : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-                  }`}
-                  title="Favoritkan"
-                >
-                  <Heart className={`w-5 h-5 ${isWishlisted ? 'fill-rose-500' : ''}`} />
-                </button>
+              <div className="text-xs font-semibold text-[#4A2C2A] bg-white px-3 py-1.5 rounded-xl border border-[#FCE7D2]">
+                {product.weightGrams ? `${product.weightGrams} gram` : product.servings}
               </div>
             </div>
           </div>
 
-          {/* Bottom Tabs: Deskripsi & Ulasan */}
-          <div className="border-t border-slate-200 pt-6">
-            <div className="flex border-b border-slate-200 mb-4 gap-6">
-              <button
-                id="tab-deskripsi-btn"
-                onClick={() => setActiveTab('deskripsi')}
-                className={`pb-3 text-sm font-bold border-b-2 transition ${
-                  activeTab === 'deskripsi'
-                    ? 'border-emerald-600 text-emerald-700'
-                    : 'border-transparent text-slate-500 hover:text-slate-800'
-                }`}
-              >
-                Deskripsi & Spesifikasi
-              </button>
-              <button
-                id="tab-ulasan-btn"
-                onClick={() => setActiveTab('ulasan')}
-                className={`pb-3 text-sm font-bold border-b-2 transition flex items-center gap-2 ${
-                  activeTab === 'ulasan'
-                    ? 'border-emerald-600 text-emerald-700'
-                    : 'border-transparent text-slate-500 hover:text-slate-800'
-                }`}
-              >
-                Ulasan Pembeli ({product.reviewCount})
-              </button>
-            </div>
+          {/* Description */}
+          <div>
+            <h4 className="text-xs font-bold uppercase tracking-wider text-[#FF6B35] mb-1">
+              Tentang Roti Ini
+            </h4>
+            <p className="text-sm text-[#4A2C2A] leading-relaxed">
+              {product.description}
+            </p>
+          </div>
 
-            {activeTab === 'deskripsi' ? (
-              <div className="space-y-4 text-sm text-slate-600 leading-relaxed">
-                <p>{product.description}</p>
-                <div className="space-y-2 pt-2">
-                  <h4 className="font-bold text-slate-900">Keunggulan Fitur Utama:</h4>
-                  <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {product.features.map((feat, idx) => (
-                      <li key={idx} className="flex items-center gap-2 text-slate-700">
-                        <Check className="w-4 h-4 text-emerald-600 shrink-0" />
-                        <span>{feat}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+          {/* Slicing Option (for Sourdough & Loaves) */}
+          {product.allowSlicing && (
+            <div className="bg-white p-4 rounded-2xl border border-[#FCE7D2] space-y-2">
+              <div className="flex items-center gap-2">
+                <Utensils className="w-4 h-4 text-[#FF6B35]" />
+                <label className="text-xs font-bold text-[#4A2C2A] uppercase tracking-wide">
+                  Pilihan Pemotongan Roti (Gratis)
+                </label>
               </div>
-            ) : (
-              <div className="space-y-4">
-                {SAMPLE_REVIEWS.map((rev) => (
-                  <div key={rev.id} className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-start gap-3">
-                    <img src={rev.userAvatar} alt={rev.userName} className="w-10 h-10 rounded-full object-cover" referrerPolicy="no-referrer" />
-                    <div className="space-y-1">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="font-bold text-slate-900 text-sm">{rev.userName}</span>
-                        <span className="text-xs text-slate-400">{rev.date}</span>
-                      </div>
-                      <div className="flex text-amber-400">
-                        {Array.from({ length: rev.rating }).map((_, i) => (
-                          <Star key={i} className="w-3.5 h-3.5 fill-amber-400" />
-                        ))}
-                      </div>
-                      <p className="text-xs text-slate-600 mt-1">{rev.comment}</p>
-                    </div>
-                  </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                {[
+                  'Utuh (Tanpa Potong)',
+                  'Potong Tipis (10mm - Sandwiched)',
+                  'Potong Tebal (18mm - Toasting)',
+                ].map((opt) => (
+                  <button
+                    key={opt}
+                    type="button"
+                    onClick={() => setSliceOption(opt as any)}
+                    className={`px-3 py-2 rounded-xl text-xs font-bold border text-left transition-all cursor-pointer ${
+                      sliceOption === opt
+                        ? 'bg-[#FF6B35] text-white border-[#FF6B35] shadow-xs'
+                        : 'bg-[#FFF9F2] text-[#4A2C2A] border-[#FCE7D2] hover:bg-[#FFF0E0]'
+                    }`}
+                  >
+                    {opt}
+                  </button>
                 ))}
               </div>
-            )}
+            </div>
+          )}
+
+          {/* Custom Cake Inscription & Message */}
+          {product.allowCustomCakeMessage && (
+            <div className="bg-white p-4 rounded-2xl border border-[#FCE7D2] space-y-3">
+              <div>
+                <label className="block text-xs font-bold text-[#4A2C2A] uppercase tracking-wide mb-1">
+                  Tulisan di Atas Kue / Cokelat Plaque (Opsional)
+                </label>
+                <input
+                  type="text"
+                  maxLength={35}
+                  value={customMessage}
+                  onChange={(e) => setCustomMessage(e.target.value)}
+                  placeholder="Contoh: Selamat Ulang Tahun Ayah tercinta (Maks. 35 Karakter)"
+                  className="w-full bg-[#FFF9F2] border border-[#FCD8B8] rounded-xl px-3.5 py-2 text-xs text-[#4A2C2A] placeholder-[#947065] focus:ring-2 focus:ring-[#FF6B35] focus:outline-hidden"
+                />
+              </div>
+
+              {product.allowCandles && (
+                <div className="flex items-center justify-between pt-2 border-t border-[#FCE7D2]">
+                  <span className="text-xs font-semibold text-[#4A2C2A]">
+                    Jumlah Lilin Batang (Gratis):
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setCandleCount(Math.max(0, candleCount - 1))}
+                      className="w-7 h-7 rounded-lg bg-[#FFF9F2] border border-[#FCD8B8] text-[#4A2C2A] flex items-center justify-center text-xs font-bold hover:bg-[#FFEBD6] cursor-pointer"
+                    >
+                      -
+                    </button>
+                    <span className="text-xs font-bold text-[#4A2C2A] w-6 text-center">
+                      {candleCount}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setCandleCount(Math.min(10, candleCount + 1))}
+                      className="w-7 h-7 rounded-lg bg-[#FFF9F2] border border-[#FCD8B8] text-[#4A2C2A] flex items-center justify-center text-xs font-bold hover:bg-[#FFEBD6] cursor-pointer"
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Notes for Kitchen */}
+          <div>
+            <label className="block text-xs font-bold text-[#4A2C2A] mb-1">
+              Catatan Tambahan untuk Baker (Opsional):
+            </label>
+            <input
+              type="text"
+              value={itemNotes}
+              onChange={(e) => setItemNotes(e.target.value)}
+              placeholder="Contoh: Tolong pisahkan saus, atau minta kemasan rapat..."
+              className="w-full bg-white border border-[#FCD8B8] rounded-xl px-3.5 py-2 text-xs text-[#4A2C2A] placeholder-[#947065] focus:ring-2 focus:ring-[#FF6B35] focus:outline-hidden"
+            />
           </div>
+
+          {/* Ingredients & Allergens Accordion/Info */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+            <div className="bg-[#FFF0E0] p-3.5 rounded-2xl border border-[#FCD8B8]">
+              <span className="font-bold text-[#4A2C2A] block mb-1.5">Bahan Berkualitas:</span>
+              <p className="text-[#6B463E] leading-relaxed">
+                {product.ingredients.join(', ')}
+              </p>
+            </div>
+
+            <div className="bg-[#FFF0E0] p-3.5 rounded-2xl border border-[#FCD8B8]">
+              <div className="flex items-center gap-1 font-bold text-[#4A2C2A] mb-1.5">
+                <AlertCircle className="w-3.5 h-3.5 text-[#FF6B35]" />
+                <span>Informasi Alergen:</span>
+              </div>
+              <p className="text-[#6B463E] leading-relaxed">
+                {product.allergens.join(', ')}
+              </p>
+            </div>
+          </div>
+
+          {/* Storage & Freshness Tips */}
+          <div className="flex items-start gap-2 bg-[#EAFBF9] p-3.5 rounded-2xl border border-[#2EC4B6] text-xs text-[#0F6860]">
+            <Clock className="w-4 h-4 text-[#2EC4B6] shrink-0 mt-0.5" />
+            <div>
+              <span className="font-bold block text-[#0F6860]">Masa Simpan: {product.shelfLife}</span>
+              <span className="text-[#0F6860]/80">{product.storageTip}</span>
+            </div>
+          </div>
+
+          {/* Footer Action: Quantity & Add Button */}
+          <div className="pt-4 border-t border-[#FCE7D2] flex items-center justify-between gap-4">
+            {/* Quantity Stepper */}
+            <div className="flex items-center gap-3 bg-[#FFF0E0] p-1.5 rounded-2xl border border-[#FCD8B8]">
+              <button
+                type="button"
+                id="btn-modal-qty-minus"
+                onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                className="w-8 h-8 rounded-xl bg-white text-[#4A2C2A] hover:bg-[#FFEBD6] flex items-center justify-center transition-colors shadow-2xs font-bold cursor-pointer"
+              >
+                <Minus className="w-3.5 h-3.5" />
+              </button>
+              <span className="w-8 text-center font-bold text-[#4A2C2A] text-sm">
+                {quantity}
+              </span>
+              <button
+                type="button"
+                id="btn-modal-qty-plus"
+                onClick={() => setQuantity(quantity + 1)}
+                className="w-8 h-8 rounded-xl bg-white text-[#4A2C2A] hover:bg-[#FFEBD6] flex items-center justify-center transition-colors shadow-2xs font-bold cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            {/* Add to Cart Submit Button */}
+            <button
+              type="button"
+              id="btn-modal-submit-cart"
+              onClick={handleAdd}
+              disabled={addedAnimation}
+              className={`flex-1 py-3 px-6 rounded-2xl font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                addedAnimation 
+                  ? 'bg-[#2EC4B6] text-white'
+                  : 'bg-[#FF6B35] hover:bg-[#E8551E] text-white'
+              }`}
+            >
+              {addedAnimation ? (
+                <>
+                  <Check className="w-5 h-5 animate-bounce" />
+                  <span>Berhasil Ditambahkan!</span>
+                </>
+              ) : (
+                <>
+                  <ShoppingBag className="w-4 h-4" />
+                  <span>Tambah ke Keranjang • {formatRupiah(totalPrice)}</span>
+                </>
+              )}
+            </button>
+          </div>
+
         </div>
       </div>
     </div>

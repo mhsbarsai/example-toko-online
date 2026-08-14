@@ -1,473 +1,384 @@
-import React, { useState, useMemo } from 'react';
-import { Header } from './components/Header';
+import React, { useState, useEffect } from 'react';
+import { Navbar } from './components/Navbar';
 import { HeroBanner } from './components/HeroBanner';
-import { ProductCard } from './components/ProductCard';
+import { ProductCatalog } from './components/ProductCatalog';
 import { ProductDetailModal } from './components/ProductDetailModal';
 import { CartDrawer } from './components/CartDrawer';
 import { CheckoutModal } from './components/CheckoutModal';
-import { OrderSuccessModal } from './components/OrderSuccessModal';
-import { OrderHistoryModal } from './components/OrderHistoryModal';
-import { WishlistModal } from './components/WishlistModal';
-import { NotificationToast, ToastMessage } from './components/NotificationToast';
+import { PaymentSuccessModal } from './components/PaymentSuccessModal';
+import { OrderTrackerModal } from './components/OrderTrackerModal';
+import { BakingScheduleModal } from './components/BakingScheduleModal';
+import { StoreLocationsModal } from './components/StoreLocationsModal';
+import { AIBakerConsultant } from './components/AIBakerConsultant';
+import { AdminOrdersModal } from './components/AdminOrdersModal';
+import { Footer } from './components/Footer';
 
-import { Product, ProductCategory, CartItem, Voucher, Order } from './types';
-import { SAMPLE_PRODUCTS, SHIPPING_COURIERS, PAYMENT_METHODS } from './data/products';
-import { formatRupiah, generateOrderId, generateTrackingNumber } from './utils/formatters';
-import { 
-  Filter, 
-  SlidersHorizontal, 
-  Sparkles, 
-  Star, 
-  SearchX, 
-  ArrowUpDown,
-  ShoppingBag,
-  ShieldCheck,
-  Heart,
-  Truck,
-  RotateCcw
-} from 'lucide-react';
+import { Product, CartItem, Order, PromoCode } from './types';
+import { INITIAL_PRODUCTS } from './data/products';
 
 export default function App() {
-  // Navigation & Search State
-  const [selectedCategory, setSelectedCategory] = useState<ProductCategory>('Semua');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [sortBy, setSortBy] = useState<'popular' | 'price-asc' | 'price-desc' | 'rating'>('popular');
-  const [minRating, setMinRating] = useState<number>(0);
-  const [maxPrice, setMaxPrice] = useState<number>(2000000);
+  const [products] = useState<Product[]>(INITIAL_PRODUCTS);
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState<string>('');
 
-  // Shopping Cart & Wishlist State
-  const [cart, setCart] = useState<CartItem[]>([
-    {
-      product: SAMPLE_PRODUCTS[0],
-      quantity: 1,
-      selectedColor: 'Hitam Onyx'
+  // Cart state persisted in localStorage
+  const [cartItems, setCartItems] = useState<CartItem[]>(() => {
+    try {
+      const saved = localStorage.getItem('kencana_cart');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
     }
-  ]);
-  const [wishlist, setWishlist] = useState<Product[]>([SAMPLE_PRODUCTS[1]]);
-  const [appliedVoucher, setAppliedVoucher] = useState<Voucher | null>(null);
+  });
 
-  // Orders State (with 1 initial completed order for demo)
-  const [orders, setOrders] = useState<Order[]>([
-    {
-      id: 'INV/TK/982103/4812',
-      createdAt: new Date(Date.now() - 86400000 * 2).toISOString(),
-      items: [
-        {
-          product: SAMPLE_PRODUCTS[1],
-          quantity: 1,
-          selectedColor: 'Black Edition'
-        }
-      ],
-      address: {
-        fullName: 'Ahmad Rizky',
-        phone: '081234567890',
-        address: 'Jl. Jendral Sudirman No. 45',
-        city: 'Jakarta Pusat',
-        province: 'DKI Jakarta',
-        postalCode: '10270'
-      },
-      courier: SHIPPING_COURIERS[0],
-      paymentMethod: PAYMENT_METHODS[0],
-      subtotal: 499000,
-      shippingCost: 18000,
-      discount: 0,
-      total: 518000,
-      status: 'Dikirim',
-      trackingNumber: generateTrackingNumber('JNE'),
-      paidAt: new Date(Date.now() - 86400000 * 2).toISOString()
-    }
-  ]);
-  const [latestOrder, setLatestOrder] = useState<Order | null>(null);
+  useEffect(() => {
+    localStorage.setItem('kencana_cart', JSON.stringify(cartItems));
+  }, [cartItems]);
 
-  // Modal Open States
-  const [isCartOpen, setIsCartOpen] = useState(false);
-  const [isWishlistOpen, setIsWishlistOpen] = useState(false);
-  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
-  const [isOrderSuccessOpen, setIsOrderSuccessOpen] = useState(false);
-  const [isOrderHistoryOpen, setIsOrderHistoryOpen] = useState(false);
-  const [selectedDetailProduct, setSelectedDetailProduct] = useState<Product | null>(null);
+  // Orders state persisted in localStorage
+  const [orders, setOrders] = useState<Order[]>(() => {
+    try {
+      const saved = localStorage.getItem('kencana_orders_history');
+      if (saved) return JSON.parse(saved);
 
-  // Toast Notifications
-  const [toasts, setToasts] = useState<ToastMessage[]>([]);
-
-  const addToast = (text: string, type: 'success' | 'error' | 'info' = 'success') => {
-    const id = Math.random().toString();
-    setToasts((prev) => [...prev, { id, type, text }]);
-  };
-
-  const dismissToast = (id: string) => {
-    setToasts((prev) => prev.filter((t) => t.id !== id));
-  };
-
-  // Categories list
-  const categories: ProductCategory[] = [
-    'Semua',
-    'Elektronik & Gadget',
-    'Fashion Pria & Wanita',
-    'Sepatu & Olahraga',
-    'Peralatan Rumah',
-    'Kecantikan & Kesehatan',
-    'Makanan & Minuman',
-    'Produk Lokal UKM'
-  ];
-
-  // Filtered & Sorted Products
-  const filteredProducts = useMemo(() => {
-    return SAMPLE_PRODUCTS.filter((prod) => {
-      const matchCategory = selectedCategory === 'Semua' || prod.category === selectedCategory;
-      const matchSearch = searchQuery === '' || 
-        prod.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        prod.brand.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        prod.category.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchRating = prod.rating >= minRating;
-      const matchPrice = prod.price <= maxPrice;
-
-      return matchCategory && matchSearch && matchRating && matchPrice;
-    }).sort((a, b) => {
-      if (sortBy === 'price-asc') return a.price - b.price;
-      if (sortBy === 'price-desc') return b.price - a.price;
-      if (sortBy === 'rating') return b.rating - a.rating;
-      return b.salesCount - a.salesCount; // popular
-    });
-  }, [selectedCategory, searchQuery, sortBy, minRating, maxPrice]);
-
-  // Cart Calculations
-  const cartItemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
-  const cartTotal = cart.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
-
-  // Cart Handlers
-  const handleAddToCart = (
-    product: Product, 
-    quantity: number = 1, 
-    options?: { color?: string; size?: string; variant?: string }
-  ) => {
-    setCart((prevCart) => {
-      const existingIndex = prevCart.findIndex(
-        (i) => i.product.id === product.id && 
-               i.selectedColor === options?.color && 
-               i.selectedSize === options?.size
-      );
-
-      if (existingIndex > -1) {
-        const updated = [...prevCart];
-        updated[existingIndex].quantity += quantity;
-        return updated;
-      } else {
-        return [
-          ...prevCart,
+      // Seed with sample initial order for rich testing
+      const sampleOrder: Order = {
+        id: 'ord_sample_1',
+        orderNumber: 'KNC-88219',
+        createdAt: new Date(Date.now() - 45 * 60 * 1000).toISOString(),
+        items: [
           {
-            product,
-            quantity,
-            selectedColor: options?.color,
-            selectedSize: options?.size,
-            selectedVariant: options?.variant
+            id: 'cart_s1',
+            product: INITIAL_PRODUCTS[0],
+            quantity: 1,
+            sliceOption: 'Potong Tebal (18mm - Toasting)',
+          },
+          {
+            id: 'cart_s2',
+            product: INITIAL_PRODUCTS[4],
+            quantity: 2,
           }
-        ];
-      }
-    });
+        ],
+        customer: {
+          fullName: 'Budi Santoso',
+          phoneNumber: '081299887766',
+          email: 'budi.santoso@gmail.com',
+          address: 'Jl. Wijaya Timur No. 15, Kebayoran Baru',
+          city: 'Jakarta Selatan',
+          deliveryDate: new Date().toISOString().split('T')[0],
+          deliveryTimeSlot: 'Pagi (08:00 - 11:00 WIB)',
+          isGift: false,
+        },
+        deliveryMethod: 'instant',
+        paymentMethod: 'qris',
+        subtotal: 138000,
+        deliveryFee: 25000,
+        packagingFee: 3000,
+        discount: 0,
+        grandTotal: 166000,
+        status: 'BAKING',
+        paymentInfo: {
+          expiresAt: new Date().toISOString(),
+          paidAt: new Date(Date.now() - 40 * 60 * 1000).toISOString(),
+          transactionId: 'TRX-SAMPLE-9901'
+        },
+        timeline: [
+          {
+            title: 'Pesanan Dibuat',
+            description: 'Pesanan diterima sistem online.',
+            timestamp: '08:15',
+            completed: true,
+          },
+          {
+            title: 'Pembayaran Dikonfirmasi',
+            description: 'QRIS diverifikasi lunas.',
+            timestamp: '08:16',
+            completed: true,
+          },
+          {
+            title: 'Dipanggang & Dikemas Dapur',
+            description: 'Dapur memanggang batch sourdough segar.',
+            timestamp: '08:25',
+            completed: true,
+            current: true,
+          },
+          {
+            title: 'Dalam Pengantaran Kurir',
+            description: 'Kurir menuju lokasi tujuan.',
+            timestamp: '-',
+            completed: false,
+          },
+          {
+            title: 'Pesanan Selesai',
+            description: 'Roti tiba dalam kondisi hangat.',
+            timestamp: '-',
+            completed: false,
+          }
+        ]
+      };
+      localStorage.setItem('kencana_orders_history', JSON.stringify([sampleOrder]));
+      return [sampleOrder];
+    } catch {
+      return [];
+    }
+  });
 
-    addToast(`"${product.name.slice(0, 24)}..." ditambahkan ke keranjang!`);
+  const saveOrders = (newOrders: Order[]) => {
+    setOrders(newOrders);
+    localStorage.setItem('kencana_orders_history', JSON.stringify(newOrders));
   };
 
-  const handleUpdateCartQty = (productId: string, delta: number) => {
-    setCart((prev) =>
-      prev
-        .map((item) => {
-          if (item.product.id === productId) {
-            const newQty = item.quantity + delta;
-            return newQty > 0 ? { ...item, quantity: newQty } : null;
-          }
-          return item;
-        })
-        .filter(Boolean) as CartItem[]
+  // Active Promo Code
+  const [appliedPromo, setAppliedPromo] = useState<PromoCode | undefined>(undefined);
+
+  // Modals visibility
+  const [selectedProductForDetail, setSelectedProductForDetail] = useState<Product | null>(null);
+  const [isCartOpen, setIsCartOpen] = useState(false);
+  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+  const [activeOrderForReceipt, setActiveOrderForReceipt] = useState<Order | null>(null);
+  const [isTrackerOpen, setIsTrackerOpen] = useState(false);
+  const [trackerInitialCode, setTrackerInitialCode] = useState('');
+  const [isBakingScheduleOpen, setIsBakingScheduleOpen] = useState(false);
+  const [isLocationsOpen, setIsLocationsOpen] = useState(false);
+  const [isAIConsultantOpen, setIsAIConsultantOpen] = useState(false);
+  const [isAdminOpen, setIsAdminOpen] = useState(false);
+
+  // Cart operations
+  const handleAddToCart = (newItem: Omit<CartItem, 'id'>) => {
+    const existingIndex = cartItems.findIndex(
+      (item) =>
+        item.product.id === newItem.product.id &&
+        item.sliceOption === newItem.sliceOption &&
+        item.customMessage === newItem.customMessage
     );
-  };
 
-  const handleRemoveCartItem = (productId: string) => {
-    setCart((prev) => prev.filter((i) => i.product.id !== productId));
-    addToast('Produk dihapus dari keranjang', 'info');
-  };
-
-  // Wishlist Handlers
-  const handleToggleWishlist = (product: Product) => {
-    const exists = wishlist.some((p) => p.id === product.id);
-    if (exists) {
-      setWishlist((prev) => prev.filter((p) => p.id !== product.id));
-      addToast('Dihapus dari favorit', 'info');
+    if (existingIndex > -1) {
+      const updated = [...cartItems];
+      updated[existingIndex].quantity += newItem.quantity;
+      setCartItems(updated);
     } else {
-      setWishlist((prev) => [...prev, product]);
-      addToast('Disimpan ke daftar favorit!');
+      const itemWithId: CartItem = {
+        ...newItem,
+        id: `cart_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      };
+      setCartItems((prev) => [...prev, itemWithId]);
     }
   };
 
-  // Instant Buy Handler
-  const handleInstantBuy = (
-    product: Product, 
-    quantity: number = 1, 
-    options?: { color?: string; size?: string; variant?: string }
-  ) => {
-    handleAddToCart(product, quantity, options);
-    setSelectedDetailProduct(null);
+  const handleQuickAddToCart = (product: Product) => {
+    handleAddToCart({
+      product,
+      quantity: 1,
+    });
+    setIsCartOpen(true);
+  };
+
+  const handleUpdateCartQuantity = (id: string, newQty: number) => {
+    if (newQty <= 0) {
+      setCartItems((prev) => prev.filter((item) => item.id !== id));
+    } else {
+      setCartItems((prev) =>
+        prev.map((item) => (item.id === id ? { ...item, quantity: newQty } : item))
+      );
+    }
+  };
+
+  const handleRemoveCartItem = (id: string) => {
+    setCartItems((prev) => prev.filter((item) => item.id !== id));
+  };
+
+  // Checkout flow
+  const handleProceedToCheckout = (promo?: PromoCode) => {
+    if (promo) setAppliedPromo(promo);
     setIsCartOpen(false);
     setIsCheckoutOpen(true);
   };
 
-  // Order Placement Handler
   const handleOrderCompleted = (newOrder: Order) => {
-    setOrders((prev) => [newOrder, ...prev]);
-    setLatestOrder(newOrder);
-    setCart([]);
-    setAppliedVoucher(null);
+    saveOrders([newOrder, ...orders]);
+    setCartItems([]); // clear cart
+    setAppliedPromo(undefined);
     setIsCheckoutOpen(false);
-    setIsOrderSuccessOpen(true);
-    addToast('Pembayaran berhasil! Pesanan Anda diproses.', 'success');
+    setActiveOrderForReceipt(newOrder);
   };
 
-  // Reorder Handler
-  const handleReorder = (orderToReorder: Order) => {
-    orderToReorder.items.forEach((item) => {
-      handleAddToCart(item.product, item.quantity, {
-        color: item.selectedColor,
-        size: item.selectedSize,
-        variant: item.selectedVariant
-      });
+  const handleUpdateOrderStatus = (orderId: string, newStatus: Order['status']) => {
+    const updated = orders.map((o) => {
+      if (o.id === orderId || o.orderNumber === orderId) {
+        return {
+          ...o,
+          status: newStatus,
+          paymentInfo: {
+            ...o.paymentInfo,
+            paidAt: newStatus !== 'UNPAID' ? new Date().toISOString() : undefined,
+          }
+        };
+      }
+      return o;
     });
-    setIsOrderHistoryOpen(false);
-    setIsCartOpen(true);
-    addToast('Produk dimasukkan kembali ke keranjang!');
+
+    saveOrders(updated);
+    if (activeOrderForReceipt && (activeOrderForReceipt.id === orderId || activeOrderForReceipt.orderNumber === orderId)) {
+      setActiveOrderForReceipt({
+        ...activeOrderForReceipt,
+        status: newStatus,
+        paymentInfo: {
+          ...activeOrderForReceipt.paymentInfo,
+          paidAt: newStatus !== 'UNPAID' ? new Date().toISOString() : undefined,
+        }
+      });
+    }
+  };
+
+  const handleOpenTrackerForOrder = (orderCode: string) => {
+    setTrackerInitialCode(orderCode);
+    setIsTrackerOpen(true);
+  };
+
+  const scrollToMenu = () => {
+    const elem = document.getElementById('katalog-produk-section');
+    if (elem) {
+      elem.scrollIntoView({ behavior: 'smooth' });
+    }
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800 font-sans selection:bg-emerald-500 selection:text-white flex flex-col">
-      {/* Header Bar */}
-      <Header
-        cartCount={cartItemCount}
-        cartTotal={cartTotal}
-        wishlistCount={wishlist.length}
-        ordersCount={orders.length}
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-        selectedCategory={selectedCategory}
-        onSelectCategory={setSelectedCategory}
+    <div className="min-h-screen bg-[#FFF9F2] text-[#4A2C2A] flex flex-col font-sans selection:bg-[#FF6B35] selection:text-white">
+      
+      {/* Top Navbar */}
+      <Navbar
+        cartItems={cartItems}
         onOpenCart={() => setIsCartOpen(true)}
-        onOpenWishlist={() => setIsWishlistOpen(true)}
-        onOpenOrders={() => setIsOrderHistoryOpen(true)}
-        categories={categories}
+        onOpenTracker={() => {
+          setTrackerInitialCode('');
+          setIsTrackerOpen(true);
+        }}
+        onOpenBakingSchedule={() => setIsBakingScheduleOpen(true)}
+        onOpenLocations={() => setIsLocationsOpen(true)}
+        onOpenAIConsultant={() => setIsAIConsultantOpen(true)}
+        onOpenAdmin={() => setIsAdminOpen(true)}
+        onSelectCategory={(catId) => {
+          setSelectedCategory(catId);
+          scrollToMenu();
+        }}
+        searchQuery={searchQuery}
+        onSearchChange={(q) => {
+          setSearchQuery(q);
+          if (q) scrollToMenu();
+        }}
       />
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {/* Hero Section & Category Pills */}
+      <main className="flex-1">
+        
+        {/* Hero Banner with Bakery USPs */}
         <HeroBanner
-          selectedCategory={selectedCategory}
-          onSelectCategory={setSelectedCategory}
+          onExploreMenu={scrollToMenu}
+          onOpenAIConsultant={() => setIsAIConsultantOpen(true)}
+          onOpenSchedule={() => setIsBakingScheduleOpen(true)}
         />
 
-        {/* Catalog Section */}
-        <section id="catalog-section" className="space-y-6">
-          {/* Controls & Filter Bar */}
-          <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-2xs flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-2">
-              <h2 className="text-lg font-black text-slate-900 tracking-tight">
-                Katalog {selectedCategory}
-              </h2>
-              <span className="bg-emerald-100 text-emerald-800 text-xs font-bold px-2.5 py-0.5 rounded-full">
-                {filteredProducts.length} Produk
-              </span>
-            </div>
+        {/* Product Catalog Section */}
+        <ProductCatalog
+          products={products}
+          selectedCategory={selectedCategory}
+          onSelectCategory={setSelectedCategory}
+          searchQuery={searchQuery}
+          onSelectProduct={(product) => setSelectedProductForDetail(product)}
+          onQuickAddToCart={handleQuickAddToCart}
+        />
 
-            {/* Filter Controls */}
-            <div className="flex items-center gap-3 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0">
-              {/* Sort By Dropdown */}
-              <div className="flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-medium shrink-0">
-                <ArrowUpDown className="w-3.5 h-3.5 text-slate-500" />
-                <span className="text-slate-500 hidden sm:inline">Urutkan:</span>
-                <select
-                  id="sort-products-select"
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value as any)}
-                  className="bg-transparent font-bold text-slate-800 focus:outline-hidden cursor-pointer"
-                >
-                  <option value="popular">Paling Populer</option>
-                  <option value="price-asc">Harga Terendah</option>
-                  <option value="price-desc">Harga Tertinggi</option>
-                  <option value="rating">Rating Tertinggi</option>
-                </select>
-              </div>
-
-              {/* Rating Filter Pill */}
-              <button
-                id="rating-filter-pill-btn"
-                onClick={() => setMinRating(minRating === 4.5 ? 0 : 4.5)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold border shrink-0 transition flex items-center gap-1 ${
-                  minRating > 0
-                    ? 'bg-amber-100 text-amber-900 border-amber-300'
-                    : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200'
-                }`}
-              >
-                <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" /> Rating 4.5+
-              </button>
-            </div>
-          </div>
-
-          {/* Product Grid */}
-          {filteredProducts.length === 0 ? (
-            <div className="bg-white rounded-3xl p-12 text-center border border-slate-200 space-y-3 my-8">
-              <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto text-slate-400">
-                <SearchX className="w-8 h-8" />
-              </div>
-              <h3 className="text-base font-bold text-slate-800">Produk Tidak Ditemukan</h3>
-              <p className="text-xs text-slate-500 max-w-sm mx-auto">
-                Maaf, tidak ada produk yang cocok dengan pencarian atau filter Anda. Coba kata kunci lain.
-              </p>
-              <button
-                id="reset-filter-btn"
-                onClick={() => {
-                  setSearchQuery('');
-                  setSelectedCategory('Semua');
-                  setMinRating(0);
-                  setMaxPrice(2000000);
-                }}
-                className="bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold px-4 py-2 rounded-xl transition"
-              >
-                Reset Filter
-              </button>
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
-              {filteredProducts.map((product) => (
-                <ProductCard
-                  key={product.id}
-                  product={product}
-                  isWishlisted={wishlist.some((p) => p.id === product.id)}
-                  isInCart={cart.some((i) => i.product.id === product.id)}
-                  onToggleWishlist={handleToggleWishlist}
-                  onAddToCart={(prod) => handleAddToCart(prod, 1)}
-                  onViewDetail={(prod) => setSelectedDetailProduct(prod)}
-                />
-              ))}
-            </div>
-          )}
-        </section>
       </main>
 
-      {/* Modern Footer */}
-      <footer className="mt-16 bg-slate-900 text-slate-300 border-t border-slate-800 pt-12 pb-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-emerald-500 flex items-center justify-center text-slate-950 font-black text-lg">
-                  T
-                </div>
-                <span className="text-lg font-bold text-white tracking-tight">
-                  Toko<span className="text-emerald-400">Nusantara</span>
-                </span>
-              </div>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                Platform e-commerce lokal terpercaya menyajikan produk kualitas terbaik dengan sistem pembayaran terintegrasi, aman, dan bebas ongkir.
-              </p>
-            </div>
-
-            <div className="space-y-2 text-xs">
-              <h4 className="font-bold text-white uppercase tracking-wider text-sm mb-3">Layanan Pelanggan</h4>
-              <p className="hover:text-white cursor-pointer transition">Pusat Bantuan & FAQ</p>
-              <p className="hover:text-white cursor-pointer transition">Cara Pengembalian Barang</p>
-              <p className="hover:text-white cursor-pointer transition">Lacak Pengiriman Kurir</p>
-              <p className="hover:text-white cursor-pointer transition">Garansi Resmi 100%</p>
-            </div>
-
-            <div className="space-y-2 text-xs">
-              <h4 className="font-bold text-white uppercase tracking-wider text-sm mb-3">Sistem Pembayaran</h4>
-              <div className="flex flex-wrap gap-2 text-slate-400">
-                <span className="bg-slate-800 px-2 py-1 rounded-md">QRIS</span>
-                <span className="bg-slate-800 px-2 py-1 rounded-md">BCA VA</span>
-                <span className="bg-slate-800 px-2 py-1 rounded-md">Mandiri</span>
-                <span className="bg-slate-800 px-2 py-1 rounded-md">GoPay</span>
-                <span className="bg-slate-800 px-2 py-1 rounded-md">DANA</span>
-                <span className="bg-slate-800 px-2 py-1 rounded-md">Visa</span>
-              </div>
-            </div>
-
-            <div className="space-y-2 text-xs">
-              <h4 className="font-bold text-white uppercase tracking-wider text-sm mb-3">Jasa Pengiriman</h4>
-              <p className="text-slate-400">JNE Express, SiCepat Ekspres, GoSend, GrabExpress</p>
-              <div className="pt-2 flex items-center gap-2 text-emerald-400 font-bold">
-                <ShieldCheck className="w-4 h-4" /> Transaksi Terenkripsi SSL
-              </div>
-            </div>
-          </div>
-
-          <div className="pt-8 border-t border-slate-800 text-center text-xs text-slate-500">
-            © 2026 TokoNusantara E-Commerce Indonesia. All rights reserved.
-          </div>
-        </div>
-      </footer>
-
-      {/* Modals & Slide-over Drawers */}
-      <ProductDetailModal
-        product={selectedDetailProduct}
-        isOpen={!!selectedDetailProduct}
-        onClose={() => setSelectedDetailProduct(null)}
-        isWishlisted={selectedDetailProduct ? wishlist.some((p) => p.id === selectedDetailProduct.id) : false}
-        onToggleWishlist={handleToggleWishlist}
-        onAddToCart={(prod, qty, opts) => {
-          handleAddToCart(prod, qty, opts);
-          setSelectedDetailProduct(null);
+      {/* Footer */}
+      <Footer
+        onOpenSchedule={() => setIsBakingScheduleOpen(true)}
+        onOpenLocations={() => setIsLocationsOpen(true)}
+        onOpenTracker={() => {
+          setTrackerInitialCode('');
+          setIsTrackerOpen(true);
         }}
-        onInstantBuy={handleInstantBuy}
       />
 
+      {/* MODALS & DRAWERS */}
+
+      {/* 1. Product Detail & Customization Modal */}
+      <ProductDetailModal
+        product={selectedProductForDetail}
+        onClose={() => setSelectedProductForDetail(null)}
+        onAddToCart={handleAddToCart}
+      />
+
+      {/* 2. Cart Drawer */}
       <CartDrawer
         isOpen={isCartOpen}
         onClose={() => setIsCartOpen(false)}
-        items={cart}
-        onUpdateQuantity={handleUpdateCartQty}
+        items={cartItems}
+        onUpdateQuantity={handleUpdateCartQuantity}
         onRemoveItem={handleRemoveCartItem}
-        onClearCart={() => setCart([])}
-        appliedVoucher={appliedVoucher}
-        onApplyVoucher={setAppliedVoucher}
-        onProceedToCheckout={() => {
-          setIsCartOpen(false);
-          setIsCheckoutOpen(true);
-        }}
+        onProceedToCheckout={handleProceedToCheckout}
+        appliedPromo={appliedPromo}
+        onApplyPromo={setAppliedPromo}
       />
 
+      {/* 3. Checkout Modal (Delivery & Multi-channel Payment) */}
       <CheckoutModal
         isOpen={isCheckoutOpen}
         onClose={() => setIsCheckoutOpen(false)}
-        items={cart}
-        appliedVoucher={appliedVoucher}
+        items={cartItems}
+        appliedPromo={appliedPromo}
         onOrderCompleted={handleOrderCompleted}
       />
 
-      <OrderSuccessModal
-        order={latestOrder}
-        isOpen={isOrderSuccessOpen}
-        onClose={() => setIsOrderSuccessOpen(false)}
-        onViewOrdersHistory={() => {
-          setIsOrderSuccessOpen(false);
-          setIsOrderHistoryOpen(true);
+      {/* 4. Payment Success & Digital Receipt Modal */}
+      <PaymentSuccessModal
+        order={activeOrderForReceipt}
+        onClose={() => setActiveOrderForReceipt(null)}
+        onTrackOrder={handleOpenTrackerForOrder}
+        onUpdateOrderStatus={handleUpdateOrderStatus}
+      />
+
+      {/* 5. Order Tracker Modal */}
+      <OrderTrackerModal
+        isOpen={isTrackerOpen}
+        onClose={() => setIsTrackerOpen(false)}
+        initialOrderNumber={trackerInitialCode}
+        onSelectOrderToView={(order) => setActiveOrderForReceipt(order)}
+      />
+
+      {/* 6. Live Baking Schedule Modal */}
+      <BakingScheduleModal
+        isOpen={isBakingScheduleOpen}
+        onClose={() => setIsBakingScheduleOpen(false)}
+        onExploreMenu={scrollToMenu}
+      />
+
+      {/* 7. Store Locations Modal */}
+      <StoreLocationsModal
+        isOpen={isLocationsOpen}
+        onClose={() => setIsLocationsOpen(false)}
+      />
+
+      {/* 8. AI Sommelier Consultant Modal */}
+      <AIBakerConsultant
+        isOpen={isAIConsultantOpen}
+        onClose={() => setIsAIConsultantOpen(false)}
+        products={products}
+        onSelectProduct={(product) => setSelectedProductForDetail(product)}
+      />
+
+      {/* 9. Admin Orders Manager Modal */}
+      <AdminOrdersModal
+        isOpen={isAdminOpen}
+        onClose={() => setIsAdminOpen(false)}
+        orders={orders}
+        onUpdateOrderStatus={handleUpdateOrderStatus}
+        onViewInvoice={(order) => {
+          setIsAdminOpen(false);
+          setActiveOrderForReceipt(order);
         }}
       />
 
-      <OrderHistoryModal
-        isOpen={isOrderHistoryOpen}
-        onClose={() => setIsOrderHistoryOpen(false)}
-        orders={orders}
-        onReorder={handleReorder}
-      />
-
-      <WishlistModal
-        isOpen={isWishlistOpen}
-        onClose={() => setIsWishlistOpen(false)}
-        wishlistItems={wishlist}
-        onRemoveWishlist={handleToggleWishlist}
-        onAddToCart={(prod) => handleAddToCart(prod, 1)}
-      />
-
-      {/* Notification Toast Stack */}
-      <NotificationToast toasts={toasts} onDismiss={dismissToast} />
     </div>
   );
 }

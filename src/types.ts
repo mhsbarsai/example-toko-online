@@ -1,12 +1,11 @@
 export type ProductCategory = 
-  | 'Semua'
-  | 'Elektronik & Gadget'
-  | 'Fashion Pria & Wanita'
-  | 'Sepatu & Olahraga'
-  | 'Peralatan Rumah'
-  | 'Kecantikan & Kesehatan'
-  | 'Makanan & Minuman'
-  | 'Produk Lokal UKM';
+  | 'all'
+  | 'roti-manis-gurih'
+  | 'artisan-sourdough'
+  | 'viennoiserie-pastry'
+  | 'cake-tart'
+  | 'hampers-gift'
+  | 'minuman-kopi';
 
 export interface Product {
   id: string;
@@ -14,98 +13,126 @@ export interface Product {
   category: ProductCategory;
   price: number;
   originalPrice?: number;
-  discountPercentage?: number;
-  rating: number;
-  reviewCount: number;
-  salesCount: number;
-  stock: number;
-  image: string;
-  additionalImages?: string[];
   description: string;
-  features: string[];
-  variants?: {
-    type: 'color' | 'size' | 'variant';
-    options: string[];
-  }[];
-  brand: string;
-  weightGrams: number;
-  isFlashSale?: boolean;
-  isBestSeller?: boolean;
-  freeShipping?: boolean;
+  shortDesc: string;
+  image: string;
+  rating: number;
+  reviewsCount: number;
+  badges?: string[];
+  dietary: ('100% Halal' | 'Gluten-Free' | 'Vegan' | 'Low-Sugar' | 'French Butter' | 'Sourdough 24h')[];
+  ingredients: string[];
+  allergens: string[];
+  shelfLife: string;
+  storageTip: string;
+  allowSlicing?: boolean;
+  allowCustomCakeMessage?: boolean;
+  allowCandles?: boolean;
+  stockStatus: 'in_stock' | 'fresh_batch' | 'pre_order' | 'sold_out';
+  freshBatchTime?: string;
+  weightGrams?: number;
+  servings?: string;
 }
 
 export interface CartItem {
+  id: string;
   product: Product;
   quantity: number;
-  selectedColor?: string;
-  selectedSize?: string;
-  selectedVariant?: string;
+  sliceOption?: 'Utuh (Tanpa Potong)' | 'Potong Tipis (10mm - Sandwiched)' | 'Potong Tebal (18mm - Toasting)';
+  customMessage?: string;
+  candleCount?: number;
+  giftBoxIncluded?: boolean;
+  itemNotes?: string;
 }
 
-export interface ShippingAddress {
+export type PaymentChannel = 
+  | 'qris'
+  | 'bca_va'
+  | 'mandiri_va'
+  | 'bni_va'
+  | 'bri_va'
+  | 'gopay'
+  | 'ovo'
+  | 'dana'
+  | 'shopeepay'
+  | 'credit_card'
+  | 'cash_on_pickup';
+
+export type DeliveryMethod = 
+  | 'instant' // Kurir Instant (1-2 Jam)
+  | 'sameday' // Kurir Same Day (4-6 Jam)
+  | 'pickup'  // Ambil Sendiri di Outlet
+  | 'courier'; // Ekspedisi Luar Kota (Kue Kering & Hampers)
+
+export interface CustomerDetails {
   fullName: string;
-  phone: string;
-  address: string;
-  city: string;
-  province: string;
-  postalCode: string;
-  notes?: string;
+  phoneNumber: string;
+  email: string;
+  address?: string;
+  subdistrict?: string;
+  city?: string;
+  postalCode?: string;
+  deliveryNotes?: string;
+  pickupBranch?: string;
+  pickupTimeSlot?: string;
+  deliveryDate: string;
+  deliveryTimeSlot: string;
+  isGift: boolean;
+  recipientName?: string;
+  recipientPhone?: string;
+  greetingCardText?: string;
 }
 
-export interface ShippingCourier {
-  id: string;
-  name: string;
-  serviceName: string;
-  estimatedDays: string;
-  price: number;
-  logo: string;
-}
-
-export type PaymentCategory = 'qris' | 'va' | 'ewallet' | 'card' | 'cod';
-
-export interface PaymentMethodOption {
-  id: string;
-  name: string;
-  category: PaymentCategory;
-  icon: string;
-  description?: string;
-  accountNumber?: string;
-}
-
-export interface Voucher {
-  code: string;
+export interface OrderTimelineEvent {
   title: string;
-  discountType: 'percentage' | 'fixed';
-  discountValue: number; // e.g. 20 for 20% or 50000 for Rp 50,000
-  minSpend: number;
-  maxDiscount?: number;
+  description: string;
+  timestamp: string;
+  completed: boolean;
+  current?: boolean;
 }
-
-export type OrderStatus = 'Menunggu Pembayaran' | 'Diproses' | 'Dikirim' | 'Selesai' | 'Dibatalkan';
 
 export interface Order {
   id: string;
+  orderNumber: string;
   createdAt: string;
   items: CartItem[];
-  address: ShippingAddress;
-  courier: ShippingCourier;
-  paymentMethod: PaymentMethodOption;
+  customer: CustomerDetails;
+  deliveryMethod: DeliveryMethod;
+  paymentMethod: PaymentChannel;
   subtotal: number;
-  shippingCost: number;
+  deliveryFee: number;
+  packagingFee: number;
   discount: number;
-  total: number;
-  status: OrderStatus;
-  trackingNumber: string;
-  virtualAccount?: string;
-  qrCodeUrl?: string;
-  paidAt?: string;
+  appliedPromo?: string;
+  grandTotal: number;
+  status: 'UNPAID' | 'VERIFYING' | 'PAID' | 'BAKING' | 'READY_DELIVERY' | 'COMPLETED' | 'CANCELLED';
+  paymentInfo: {
+    vaNumber?: string;
+    qrCodeUrl?: string;
+    expiresAt: string;
+    transactionId?: string;
+    paidAt?: string;
+  };
+  timeline: OrderTimelineEvent[];
 }
 
-export interface ProductReview {
+export interface StoreBranch {
   id: string;
-  userName: string;
-  rating: number;
-  date: string;
-  comment: string;
-  userAvatar: string;
+  name: string;
+  address: string;
+  city: string;
+  phone: string;
+  whatsapp: string;
+  operatingHours: string;
+  bakingSchedule: string;
+  isMainKitchen?: boolean;
+  mapEmbedQuery: string;
+}
+
+export interface PromoCode {
+  code: string;
+  discountType: 'percentage' | 'fixed';
+  value: number;
+  minSpend: number;
+  maxDiscount?: number;
+  description: string;
 }
